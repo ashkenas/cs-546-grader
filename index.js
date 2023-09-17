@@ -19,8 +19,8 @@ async function autoGrade(submissionsDir, assignmentConfig, GraderClass, canvasCo
       canvasConfig.assignmentId
     ) : null;
   await fs.access(submissionsDir); // Confirms access to submissionsDir
-  const subs = await fs.readdir(submissionsDir, { recursive: false });
-  for (const sub of subs) {
+  const subs = await fs.readdir(submissionsDir);
+  for (const sub of subs.filter(file => file.endsWith('.zip'))) {
     try {
       await fs.rm('current_submission', { recursive: true, force: true });
       const zip = new Zip(sub);
@@ -42,6 +42,7 @@ async function autoGrade(submissionsDir, assignmentConfig, GraderClass, canvasCo
       console.error(`Could not automatically grade submission '${sub}'.`);
     }
   }
+  // TODO: grade upload
 };
 
 export {

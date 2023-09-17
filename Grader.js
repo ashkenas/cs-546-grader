@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { spawn, execSync } from 'child_process';
 
 /**
  * Do not instantiate this class. Extend it and implement
@@ -12,6 +13,8 @@ export default class Grader {
     this.directory = 'current_submission';
     this.author = 'NO AUTHOR';
     this.module = true;
+    this.start = 'npm start';
+    this.subprocess = null;
     this.score = 100;
     this.comments = [];
   }
@@ -25,23 +28,69 @@ export default class Grader {
   deductPoints(points, reason, error = null) {
     this.score -= points;
     if (score < 0) score = 0;
-    this.comments.push(`${points}; ${reason}${error ? '\n' + error.toString() : ''}`);
+    this.comments.push(`-${points}; ${reason}${error ? '\n' + error.toString() : ''}`);
   }
 
   // TODO: file import function (not module specific)
 
   async runStartScript() {
-    // TODO: run start script or default
+    const cmd = this.start.split(' ');
+    if (!cmd[0] || cmd[0] !== 'node')
+      throw new Error('Possibly unsafe start script encountered: ' + this.start);
+    this.subprocess = spawn(cmd[0], cmd.slice(1), {
+      cwd: this.directory
+    });
   }
   
   async checks() {
-    // TODO: get directory
-    // TODO: check for package.json
-    // TODO: get module type (this.module)
-    // TODO: get student name (this.author)
-    // TODO: check for start script
-    // TODO: check required files
-    // TODO: check for node_modules, this.hadModules = true
+    let package = null;
+    const requiredFiles = Object.fromEntries(
+      (this.assignmentConfig.requiredFiles || []).map(file => [file, false])
+    );
+    const entries = await fs.readdir(current, {
+      recursive: true,
+      withFileTypes: true
+    });
+    for (const entry of entries) {
+      if (!this.hadModules && entry.isDirectory() && entry.name == 'node_modules') {
+        this.hadModules = true;
+        this.deductPoints(5, 'Included node_modules in submission.');
+        continue;
+      }
+      if (this.hadModules && entry.path.includes('node_modules')) continue;
+      const filePath = path.join('current_submission', entry.path, entry.name);
+      if (entry.name === 'package.json') {
+        this.directory = path.join('current_submission', entry.path);
+        package = await import(filePath, { assert: { type: 'json' } });
+        continue;
+      }
+      if (requiredFiles[entry.name] !== undefined) {
+        requiredFiles[entry.name] = true;
+        if (!package) this.directory = entry.path;
+      }
+    }
+    if (!package) {
+      this.deductPoints(5, 'Missing package.json file.');
+      if (!this.assignmentConfig?.startScript)
+        throw new Error('Student did not provide start script and no default was provided.');
+      this.start = this.assignmentConfig.startScript;
+    } else {
+      if (!package.type || package.type !== 'module')
+        this.module = false;
+      if (package.author) this.author = package.author;
+      if (!package.scripts || !package.scripts.start) {
+        this.deductPoints(5, 'Missing start script in package.json file.');
+        if (!this.assignmentConfig.startScript)
+          throw new Error('Student did not provide start script and no default was provided.');
+        this.start = this.assignmentConfig.startScript;
+      }
+    }
+    const missingFiles = requiredFiles.entries()
+      .filter(([_, found]) => found)
+      .map(([file, _]) => file)
+      .join(', ');
+    if (missingFiles) throw new Error('Missing file(s): ' + missingFiles);
+    execSync('npm i', { cwd: this.directory });
   }
 
   async run() {
@@ -65,5 +114,8 @@ export default class Grader {
         force: true
       });
     }
+    if (this.subprocess)
+      if (!this.subprocess.kill())
+        console.warn('Failed to kill student submission process.');
   }
 };
