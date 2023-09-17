@@ -31,7 +31,9 @@ export default class Grader {
     this.comments.push(`-${points}; ${reason}${error ? '\n' + error.toString() : ''}`);
   }
 
-  // TODO: file import function (not module specific)
+  async importFile(file) {
+    return await import(path.join(this.directory, file));
+  }
 
   async runStartScript() {
     const cmd = this.start.split(' ');
