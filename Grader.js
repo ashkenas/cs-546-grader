@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { spawn, execSync } from 'child_process';
+import { deepStrictEqual } from 'assert';
 
 /**
  * Do not instantiate this class. Extend it and implement
@@ -31,6 +32,34 @@ export default class Grader {
     this.comments.push(`-${points}; ${reason}${error ? '\n' + error.toString() : ''}`);
   }
 
+  /**
+   * Run a deep equality assertion test case.
+   * @param {number} points Points the test case is worth
+   * @param {(()=>T)} testCase The test case, should return the same type as `expectedValue`
+   * @param {T} expectedValue The anticipated result of `testCase`
+   */
+  async assertDeepEquals(points, testCase, expectedValue) {
+    let actual;
+    try {
+      actual = await testCase();
+    } catch (e) {
+      this.deductPoints(points, 'Error thrown on valid input.', e.toString());
+      return;
+    }
+
+    try {
+      deepStrictEqual(actual, expectedValue, 'Expected strict deep equality');
+    } catch (e) {
+      this.deductPoints(points, 'Unexpected results.', e.toString());
+    }
+  }
+
+  /**
+   * Import a javascript file from a relative location in the student
+   * submission.
+   * @param {string} file Relative file path from submission root
+   * @returns {*}
+   */
   async importFile(file) {
     return await import(path.join(this.directory, file));
   }
