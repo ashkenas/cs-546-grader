@@ -1,0 +1,8 @@
+{
+  "type": "module",
+  "dependencies": {
+    "adm-zip": "^0.5.10",
+    "canvas-scripts": "github:ashkenas/canvas-scripts",
+    "glob": "^10.3.4"
+  }
+}
