@@ -24,9 +24,9 @@ export default class Grader {
    * Deduct points from the student's grade.
    * @param {number} points Points to deduct
    * @param {string} reason Reason for deduction
-   * @param {string} error Optional associated error message
+   * @param {string} [error] Associated error message
    */
-  deductPoints(points, reason, error = null) {
+  deductPoints(points, reason, error) {
     this.score -= points;
     if (score < 0) score = 0;
     this.comments.push(`-${points}; ${reason}${error ? '\n' + error.toString() : ''}`);
@@ -51,6 +51,46 @@ export default class Grader {
       deepStrictEqual(actual, expectedValue, 'Expected strict deep equality');
     } catch (e) {
       this.deductPoints(points, 'Unexpected results.', e.toString());
+    }
+  }
+
+  /**
+   * Asserts that a test case throws an error. Optionally a specific
+   * error message and error type can be specified.
+   * @param {number} points Points the test case is worth
+   * @param {(()=>T)} testCase The test case, should throw the same type `
+   * @param {string} [expectedMessage] Optional specific error message
+   * @param {number} [messagePoints] Points to deduct for an incorrect error message
+   * @param {Error} [expectedType] Optional specific error type
+   * @param {number} [typePoints] Points to deduct for an incorrect error type
+   */
+  async assertThrows(points, testCase, expectedMessage, messagePoints, expectedType, typePoints) {
+    if (expectedMessage && typeof messagePoints !== 'number')
+      throw new TypeError('If expectedMessage is provided, messagePoints must be provided as well.');
+    if (expectedType && typeof typePoints !== 'number')
+      throw new TypeError('If expectedType is provided, typePoints must be provided as well.');
+    try {
+      const result = await testCase();
+      this.deductPoints(points, 'Expected an error to be thrown, got a result instead.', result);
+    } catch (e) {
+      if (!expectedMessage && !expectedType) return;
+      let deducted = 0;
+      if (expectedMessage) {
+        const message = typeof e === 'string' ? e : e.message;
+        if (message.trim() !== expectedMessage.trim()) {
+          this.deductPoints(messagePoints, 'Encountered unexpected error message.',
+            `- Expected: ${expectedMessage}\n- Received: ${message}`);
+          deducted = messagePoints;
+        }
+      }
+      if (expectedType && !(e instanceof expectedType)) {
+        // Prevent cumulative deductions from going above
+        // the total test case points
+        if (typePoints + deducted > points)
+          typePoints -= points - deducted;
+        this.deductPoints(typePoints, 'Encountered unexpected error type.',
+          `- Expected: ${expectedType.name || (typeof expectedType)}\n- Received: ${e.name || (typeof e)}`);
+      }
     }
   }
 
