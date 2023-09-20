@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { spawn, execSync } from 'child_process';
+import { spawn, execSync, fork } from 'child_process';
 import { deepStrictEqual } from 'assert';
 
 /**
@@ -9,12 +9,16 @@ import { deepStrictEqual } from 'assert';
  */
 export default class Grader {
   constructor(assignmentConfig) {
-    this.assignmentConfig = assignmentConfig || {};
+    assignmentConfig = assignmentConfig || {};
+    this.requiredFiles = assignmentConfig.requiredFiles || [];
+    this.defaultStartScript = assignmentConfig.startScript || null;
+    this.runStartScript = assignmentConfig.runStartScript || false;
+    this.checkPackage = assignmentConfig.checkPackage || true;
     this.hadModules = false;
     this.directory = 'current_submission';
     this.author = 'NO AUTHOR';
     this.module = true;
-    this.start = 'npm start';
+    this.startScript = 'npm start';
     this.subprocess = null;
     this.score = 100;
     this.comments = [];
@@ -104,10 +108,10 @@ export default class Grader {
     return await import(path.join(this.directory, file));
   }
 
-  async runStartScript() {
-    const cmd = this.start.split(' ');
+  async start() {
+    const cmd = this.startScript.split(' ');
     if (!cmd[0] || cmd[0] !== 'node')
-      throw new Error('Possibly unsafe start script encountered: ' + this.start);
+      throw new Error('Possibly unsafe start script encountered: ' + this.startScript);
     this.subprocess = spawn(cmd[0], cmd.slice(1), {
       cwd: this.directory
     });
@@ -116,7 +120,7 @@ export default class Grader {
   async checks() {
     let package = null;
     const requiredFiles = Object.fromEntries(
-      (this.assignmentConfig.requiredFiles || []).map(file => [file, false])
+      this.requiredFiles.map(file => [file, false])
     );
     const entries = await fs.readdir(current, {
       recursive: true,
@@ -140,20 +144,22 @@ export default class Grader {
         if (!package) this.directory = entry.path;
       }
     }
-    if (!package) {
-      this.deductPoints(5, 'Missing package.json file.');
-      if (!this.assignmentConfig?.startScript)
-        throw new Error('Student did not provide start script and no default was provided.');
-      this.start = this.assignmentConfig.startScript;
-    } else {
-      if (!package.type || package.type !== 'module')
-        this.module = false;
-      if (package.author) this.author = package.author;
-      if (!package.scripts || !package.scripts.start) {
-        this.deductPoints(5, 'Missing start script in package.json file.');
-        if (!this.assignmentConfig.startScript)
+    if (this.checkPackage) {
+      if (!package) {
+        this.deductPoints(5, 'Missing package.json file.');
+        if (!this.defaultStartScript)
           throw new Error('Student did not provide start script and no default was provided.');
-        this.start = this.assignmentConfig.startScript;
+        this.startScript = this.defaultStartScript;
+      } else {
+        if (!package.type || package.type !== 'module')
+          this.module = false;
+        if (package.author) this.author = package.author;
+        if (!package.scripts || !package.scripts.start) {
+          this.deductPoints(5, 'Missing start script in package.json file.');
+          if (!this.defaultStartScript)
+            throw new Error('Student did not provide start script and no default was provided.');
+          this.startScript = this.defaultStartScript;
+        }
       }
     }
     const missingFiles = requiredFiles.entries()
@@ -161,15 +167,15 @@ export default class Grader {
       .map(([file, _]) => file)
       .join(', ');
     if (missingFiles) throw new Error('Missing file(s): ' + missingFiles);
-    execSync('npm i', { cwd: this.directory });
+    if (this.checkPackage) execSync('npm i', { cwd: this.directory });
   }
 
   async run() {
     if (!this.testCases)
       throw new Error('Please implement testCases() with appropriate test cases for the assignment.');
     await this.checks();
-    if (this.assignmentConfig.runStartScript)
-      await this.runStartScript();
+    if (this.runStartScript)
+      await this.start();
     await this.testCases();
     await this.cleanup();
     return {
