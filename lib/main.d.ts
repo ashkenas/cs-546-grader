@@ -97,7 +97,7 @@ export class Grader {
    * @param {number} points Points the test case is worth
    * @param {string} message Message to print before error text
    * @param {(()=>T)} testCase The test case, should return the same type as an `expectedValues` element
-   * @param {T[]} expectedValues The anticipated result of `testCase`
+   * @param {T[]} expectedValues An array of all possible anticipated results of `testCase`
    */
   assertDeepEqualsOptions(points: number, message: string, testCase: (() => T), expectedValues: T[]): Promise<void>;
   /**

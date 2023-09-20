@@ -1,5 +1,5 @@
 import { BulkGradeUpdater } from 'canvas-scripts';
-import Grader from 'Grader';
+import Grader from 'Grader.js';
 import fs from 'fs/promises';
 import Zip from 'adm-zip';
 import path from 'path';
