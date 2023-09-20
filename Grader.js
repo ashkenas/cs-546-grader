@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { spawn, execSync, fork } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { deepStrictEqual } from 'assert';
 
 /**
