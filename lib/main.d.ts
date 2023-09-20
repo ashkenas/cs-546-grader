@@ -75,21 +75,31 @@ export class Grader {
   /**
    * Run a deep equality assertion test case.
    * @param {number} points Points the test case is worth
+   * @param {string} message Message to print before error text
    * @param {(()=>T)} testCase The test case, should return the same type as `expectedValue`
    * @param {T} expectedValue The anticipated result of `testCase`
    */
-  assertDeepEquals(points: number, testCase: (() => T), expectedValue: T): Promise<void>;
+  assertDeepEquals(points: number, message: string, testCase: (() => T), expectedValue: T): Promise<void>;
   /**
    * Asserts that a test case throws an error. Optionally a specific
    * error message and error type can be specified.
    * @param {number} points Points the test case is worth
+   * @param {string} message Message to print before error text
    * @param {(()=>T)} testCase The test case, should throw the same type `expectedType`
    * @param {string} [expectedMessage] Optional specific error message
    * @param {number} [messagePoints] Points to deduct for an incorrect error message
    * @param {Error} [expectedType] Optional specific error type
    * @param {number} [typePoints] Points to deduct for an incorrect error type
    */
-  assertThrows(points: number, testCase: (() => T), expectedMessage?: string, messagePoints?: number, expectedType?: Error, typePoints?: number): Promise<void>;
+  assertThrows(points: number, message: string, testCase: (() => T), expectedMessage?: string, messagePoints?: number, expectedType?: Error, typePoints?: number): Promise<void>;
+  /**
+   * Run a deep equality assertion test case with multiple acceptable outputs.
+   * @param {number} points Points the test case is worth
+   * @param {string} message Message to print before error text
+   * @param {(()=>T)} testCase The test case, should return the same type as an `expectedValues` element
+   * @param {T[]} expectedValues The anticipated result of `testCase`
+   */
+  assertDeepEqualsOptions(points: number, message: string, testCase: (() => T), expectedValues: T[]): Promise<void>;
   /**
    * Import a javascript file from a relative location in the student
    * submission.

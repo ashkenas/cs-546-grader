@@ -39,51 +39,80 @@ export default class Grader {
   /**
    * Run a deep equality assertion test case.
    * @param {number} points Points the test case is worth
+   * @param {string} message Message to print before error text
    * @param {(()=>T)} testCase The test case, should return the same type as `expectedValue`
    * @param {T} expectedValue The anticipated result of `testCase`
    */
-  async assertDeepEquals(points, testCase, expectedValue) {
+  async assertDeepEquals(points, message, testCase, expectedValue) {
     let actual;
     try {
       actual = await testCase();
     } catch (e) {
-      this.deductPoints(points, 'Error thrown on valid input.', e.toString());
+      this.deductPoints(points, `${message}; Error thrown on valid input.`, e.toString());
       return;
     }
 
     try {
       deepStrictEqual(actual, expectedValue, 'Expected strict deep equality');
     } catch (e) {
-      this.deductPoints(points, 'Unexpected results.', e.toString());
+      this.deductPoints(points, `${message}; Unexpected results.`, e.toString());
     }
+  }
+
+  /**
+   * Run a deep equality assertion test case with multiple acceptable outputs.
+   * @param {number} points Points the test case is worth
+   * @param {string} message Message to print before error text
+   * @param {(()=>T)} testCase The test case, should return the same type as an `expectedValues` element
+   * @param {T[]} expectedValues The anticipated result of `testCase`
+   */
+  async assertDeepEqualsOptions(points, message, testCase, expectedValues) {
+    let actual;
+    try {
+      actual = await testCase();
+    } catch (e) {
+      this.deductPoints(points, `${message}; Error thrown on valid input.`, e.toString());
+      return;
+    }
+
+    for (const expectedValue of expectedValues) {
+      try {
+        deepStrictEqual(actual, expectedValue);
+        return;
+      } catch {}
+    }
+    this.deductPoints(points, `${message}; Unexpected results.`,
+      'Expected one of the following:\n- ' +
+      expectedValues.map(e => JSON.stringify(e, null, 2)).join('\n- '));
   }
 
   /**
    * Asserts that a test case throws an error. Optionally a specific
    * error message and error type can be specified.
    * @param {number} points Points the test case is worth
+   * @param {string} message Message to print before error text
    * @param {(()=>T)} testCase The test case, should throw the same type `expectedType`
    * @param {string} [expectedMessage] Optional specific error message
    * @param {number} [messagePoints] Points to deduct for an incorrect error message
    * @param {Error} [expectedType] Optional specific error type
    * @param {number} [typePoints] Points to deduct for an incorrect error type
    */
-  async assertThrows(points, testCase, expectedMessage, messagePoints, expectedType, typePoints) {
+  async assertThrows(points, message, testCase, expectedMessage, messagePoints, expectedType, typePoints) {
     if (expectedMessage && typeof messagePoints !== 'number')
       throw new TypeError('If expectedMessage is provided, messagePoints must be provided as well.');
     if (expectedType && typeof typePoints !== 'number')
       throw new TypeError('If expectedType is provided, typePoints must be provided as well.');
     try {
       const result = await testCase();
-      this.deductPoints(points, 'Expected an error to be thrown, got a result instead.', result);
+      this.deductPoints(points, `${message}; Expected an error to be thrown, got a result instead.`, result);
     } catch (e) {
       if (!expectedMessage && !expectedType) return;
       let deducted = 0;
       if (expectedMessage) {
-        const message = typeof e === 'string' ? e : e.message;
-        if (message.trim() !== expectedMessage.trim()) {
-          this.deductPoints(messagePoints, 'Encountered unexpected error message.',
-            `- Expected: ${expectedMessage}\n- Received: ${message}`);
+        const errorMessage = typeof e === 'string' ? e : e.message;
+        if (errorMessage.trim() !== expectedMessage.trim()) {
+          this.deductPoints(messagePoints, `${message}; Encountered unexpected error message.`,
+            `- Expected: ${expectedMessage}\n- Received: ${errorMessage}`);
           deducted = messagePoints;
         }
       }
@@ -92,7 +121,7 @@ export default class Grader {
         // the total test case points
         if (typePoints + deducted > points)
           typePoints -= points - deducted;
-        this.deductPoints(typePoints, 'Encountered unexpected error type.',
+        this.deductPoints(typePoints, `${message}; Encountered unexpected error type.`,
           `- Expected: ${expectedType.name || (typeof expectedType)}\n- Received: ${e.name || (typeof e)}`);
       }
     }
