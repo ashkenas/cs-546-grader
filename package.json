@@ -1,5 +1,6 @@
 {
   "type": "module",
+  "types": "./lib/main.d.ts",
   "dependencies": {
     "adm-zip": "^0.5.10",
     "canvas-scripts": "github:ashkenas/canvas-scripts",

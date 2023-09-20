@@ -6,7 +6,31 @@ import path from 'path';
 
 const canvasIdRegex = /^[^_]*?(?:_LATE|)_([0-9]+)/;
 
-async function autoGrade(submissionsDir, assignmentConfig, GraderClass, canvasConfig) {
+/**
+ * @typedef AssignmentConfig
+ * @property {boolean} [onlyCurrent] Only run the submission in the current_submission directory. Default is false.
+ * @property {string} [startScript] The default start script to use if the student doesn't write one. Default is 'npm start'.
+ * @property {boolean} [runStartScript] Specifies if the start script should be executed before running the test cases. Default is false.
+ * @property {string[]} [requiredFiles] Names of all the files (including extensions) that must be present in the submission. Grading will fail if any are absent.
+ * @property {boolean} [checkPackage] Specifies if the package.json file should be checked for existence and required properties. Default is true.
+ */
+
+/**
+ * @typedef CanvasConfig
+ * @property {string} apiKey The Canvas API key to use for grade uploads
+ * @property {string|number} courseId The ID of the Canvas course that the assignment is a part of
+ * @property {string|number} assignmentId The ID of the Canvas assignment
+ */
+
+/**
+ * Run the autograder.
+ * @param {string} submissionsDir Directory containing all student submissions as zip files
+ * @param {Grader} GraderClass Grader class, must override the one provided in this package
+ * @param {AssignmentConfig} [assignmentConfig] Assignment-specific configuration
+ * @param {CanvasConfig} [canvasConfig] Canvas credentials
+ * @returns {void}
+ */
+async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasConfig) {
   if (assignmentConfig?.onlyCurrent) {
     const { grade, comments } = await new GraderClass(assignmentConfig).run();
     console.log(`Score: ${grade}`);

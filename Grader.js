@@ -62,7 +62,7 @@ export default class Grader {
    * Asserts that a test case throws an error. Optionally a specific
    * error message and error type can be specified.
    * @param {number} points Points the test case is worth
-   * @param {(()=>T)} testCase The test case, should throw the same type `
+   * @param {(()=>T)} testCase The test case, should throw the same type `expectedType`
    * @param {string} [expectedMessage] Optional specific error message
    * @param {number} [messagePoints] Points to deduct for an incorrect error message
    * @param {Error} [expectedType] Optional specific error type
@@ -108,6 +108,9 @@ export default class Grader {
     return await import(path.join(this.directory, file));
   }
 
+  /**
+   * Called internally by the grading framework.
+   */
   async start() {
     const cmd = this.startScript.split(' ');
     if (!cmd[0] || cmd[0] !== 'node')
@@ -117,6 +120,9 @@ export default class Grader {
     });
   }
   
+  /**
+   * Called internally by the grading framework.
+   */
   async checks() {
     let package = null;
     const requiredFiles = Object.fromEntries(
@@ -170,9 +176,17 @@ export default class Grader {
     if (this.checkPackage) execSync('npm i', { cwd: this.directory });
   }
 
+  /**
+   * Override this with assignment-specific implementation.
+   */
+  async testCases() {
+    throw new Error('Please implement testCases() with appropriate test cases for the assignment.');
+  }
+
+  /**
+   * Called internally by the grading framework.
+   */
   async run() {
-    if (!this.testCases)
-      throw new Error('Please implement testCases() with appropriate test cases for the assignment.');
     await this.checks();
     if (this.runStartScript)
       await this.start();
@@ -184,6 +198,9 @@ export default class Grader {
     };
   }
 
+  /**
+   * Called internally by the grading framework.
+   */
   async cleanup() {
     if (!this.hadModules) {
       await fs.rm(path.join(this.directory, 'node_modules'), {
