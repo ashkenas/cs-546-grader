@@ -57,6 +57,7 @@ export class Grader {
   defaultStartScript: any;
   runStartScript: any;
   checkPackage: any;
+  packageJson: any;
   hadModules: boolean;
   directory: string;
   author: string;

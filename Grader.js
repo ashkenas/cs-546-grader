@@ -14,6 +14,7 @@ export default class Grader {
     this.defaultStartScript = assignmentConfig.startScript || null;
     this.runStartScript = assignmentConfig.runStartScript || false;
     this.checkPackage = assignmentConfig.checkPackage || true;
+    this.packageJson = null;
     this.hadModules = false;
     this.directory = 'current_submission';
     this.author = 'NO AUTHOR';
@@ -153,7 +154,6 @@ export default class Grader {
    * Called internally by the grading framework.
    */
   async checks() {
-    let package = null;
     const requiredFiles = Object.fromEntries(
       this.requiredFiles.map(file => [file, false])
     );
@@ -171,25 +171,25 @@ export default class Grader {
       const filePath = path.join('current_submission', entry.path, entry.name);
       if (entry.name === 'package.json') {
         this.directory = path.join('current_submission', entry.path);
-        package = await import(filePath, { assert: { type: 'json' } });
+        this.packageJson = await import(filePath, { assert: { type: 'json' } });
         continue;
       }
       if (requiredFiles[entry.name] !== undefined) {
         requiredFiles[entry.name] = true;
-        if (!package) this.directory = entry.path;
+        if (!this.packageJson) this.directory = entry.path;
       }
     }
     if (this.checkPackage) {
-      if (!package) {
+      if (!this.packageJson) {
         this.deductPoints(5, 'Missing package.json file.');
         if (!this.defaultStartScript && this.runStartScript)
           throw new Error('Student did not provide start script and no default was provided.');
         this.startScript = this.defaultStartScript;
       } else {
-        if (!package.type || package.type !== 'module')
+        if (!this.packageJson.type || this.packageJson.type !== 'module')
           this.module = false;
-        if (package.author) this.author = package.author;
-        if (!package.scripts || !package.scripts.start) {
+        if (this.packageJson.author) this.author = this.packageJson.author;
+        if (!this.packageJson.scripts || !this.packageJson.scripts.start) {
           this.deductPoints(5, 'Missing start script in package.json file.');
           if (!this.defaultStartScript && this.runStartScript)
             throw new Error('Student did not provide start script and no default was provided.');
