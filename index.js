@@ -55,7 +55,7 @@ async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasCo
   for (const sub of subs.filter(file => file.endsWith('.zip'))) {
     const fileLoc = path.join(submissionsDir, sub);
     try {
-      console.log(`Grading ${c.info()}...`);
+      console.log(`Grading ${c.info(sub)}...`);
       await fs.rm('current_submission', { recursive: true, force: true });
       const zip = new Zip(fileLoc);
       zip.extractAllTo('current_submission');

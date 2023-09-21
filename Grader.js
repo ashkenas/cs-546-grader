@@ -5,6 +5,10 @@ import { deepStrictEqual } from 'assert';
 import { pathToFileURL } from 'url';
 
 const pretty = data => JSON.stringify(data, null, 2);
+const uid = (() => {
+  let id = 0;
+  return () => id++;
+})();
 
 /**
  * Do not instantiate this class. Extend it and implement
@@ -144,7 +148,7 @@ export default class Grader {
    */
   async importFile(file) {
     const href = pathToFileURL(path.join(this.directory, file)).href;
-    return await import(href);
+    return await import(`${href}?invalidateCache=${uid()}`);
   }
 
   /**
