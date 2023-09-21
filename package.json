@@ -4,13 +4,13 @@
   "dependencies": {
     "adm-zip": "^0.5.10",
     "canvas-scripts": "github:ashkenas/canvas-scripts",
+    "chalk": "^5.3.0",
     "glob": "^10.3.4"
   },
   "name": "cs-546-grader",
   "description": "It can grade any Node.js assignment honestly but use at your own risk.",
   "version": "1.0.0",
   "main": "index.js",
-  "devDependencies": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ashkenas/cs-546-grader.git"

@@ -3,6 +3,7 @@ import Grader from './Grader.js';
 import fs from 'fs/promises';
 import Zip from 'adm-zip';
 import path from 'path';
+import * as c from './ColorUtils.js';
 
 const canvasIdRegex = /^[^_]*?(?:_LATE|)_([0-9]+)/;
 
@@ -33,8 +34,8 @@ const canvasIdRegex = /^[^_]*?(?:_LATE|)_([0-9]+)/;
 async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasConfig) {
   if (assignmentConfig?.onlyCurrent) {
     const { grade, comments } = await new GraderClass(assignmentConfig).run();
-    console.log(`Score: ${grade}`);
-    console.error(comments);
+    console.log('Score: ' + c.success(grade));
+    console.log(c.error(comments));
     return;
   }
   const canvas = canvasConfig ?
@@ -54,31 +55,33 @@ async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasCo
   for (const sub of subs.filter(file => file.endsWith('.zip'))) {
     const fileLoc = path.join(submissionsDir, sub);
     try {
+      console.log(`Grading ${c.info()}...`);
       await fs.rm('current_submission', { recursive: true, force: true });
       const zip = new Zip(fileLoc);
       zip.extractAllTo('current_submission');
       const grader = new GraderClass(assignmentConfig);
       const { grade, comments } = await grader.run();
-      console.log(`Graded ${sub}. Score: ${grade}`);
-      if (!canvas) console.error(comments);
+      console.log(`Done. Scored ${c.success(grade)}`);
+      if (!canvas) console.log(c.error(comments));
       else {
         if (canvasIdRegex.test(sub)) {
           const studentId = canvasIdRegex.exec(sub)[1];
           canvas.addStudent(studentId, grade, comments);
           students.push([grader.author, sub]);
         } else {
-          console.error('Failed to locate student canvas ID for submission. Upload comments manually:');
-          console.error(comments || 'No comments.');
+          console.error(c.error('Failed to locate student canvas ID for submission. Upload comments manually:'));
+          console.log(c.error(comments || 'No comments.'));
         }
       }
     } catch (e) {
-      console.error(e);
-      console.error(`Could not automatically grade submission '${sub}'.`);
+      console.error(c.error('Could not automatically grade submission.'));
+      console.error(c.error(e));
     }
+    console.log(c.warning('------------------------------'));
   }
   if (canvas && students.length) {
     await canvas.sendUpdate();
-    console.log('Uploaded grades for the following students:');
+    console.log(c.success('Uploaded grades for the following students:'));
     const uploadedDir = path.join(submissionsDir, 'uploaded');
     await fs.mkdir(uploadedDir, { recursive: true });
     for (const student of students) {
@@ -89,7 +92,7 @@ async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasCo
       );
     }
   } else {
-    console.log('No grades uploaded.');
+    console.log(c.warning('No grades uploaded.'));
   }
 };
 
