@@ -43,7 +43,12 @@ async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasCo
       canvasConfig.courseId,
       canvasConfig.assignmentId
     ) : null;
-  await fs.access(submissionsDir); // Confirms access to submissionsDir
+  try {
+    // Confirms access to submissionsDir
+    await fs.access(submissionsDir);
+  } catch {
+    throw new Error('Submissions directory is inaccessible or does not exist');
+  }
   const students = [];
   const subs = await fs.readdir(submissionsDir);
   for (const sub of subs.filter(file => file.endsWith('.zip'))) {

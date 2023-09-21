@@ -2,6 +2,9 @@ import fs from 'fs/promises';
 import path from 'path';
 import { spawn, execSync } from 'child_process';
 import { deepStrictEqual } from 'assert';
+import { pathToFileURL } from 'url';
+
+const pretty = data => JSON.stringify(data, null, 2);
 
 /**
  * Do not instantiate this class. Extend it and implement
@@ -13,7 +16,7 @@ export default class Grader {
     this.requiredFiles = assignmentConfig.requiredFiles || [];
     this.defaultStartScript = assignmentConfig.startScript || null;
     this.runStartScript = assignmentConfig.runStartScript || false;
-    this.checkPackage = assignmentConfig.checkPackage || true;
+    this.checkPackage = assignmentConfig.checkPackage ?? true;
     this.packageJson = null;
     this.hadModules = false;
     this.directory = 'current_submission';
@@ -33,7 +36,7 @@ export default class Grader {
    */
   deductPoints(points, reason, error) {
     this.score -= points;
-    if (score < 0) score = 0;
+    if (this.score < 0) this.score = 0;
     this.comments.push(`-${points}; ${reason}${error ? '\n' + error.toString() : ''}`);
   }
 
@@ -56,7 +59,8 @@ export default class Grader {
     try {
       deepStrictEqual(actual, expectedValue, 'Expected strict deep equality');
     } catch (e) {
-      this.deductPoints(points, `${message}; Unexpected results.`, e.toString());
+      this.deductPoints(points, `${message}; Unexpected results.`,
+        `Received: ${pretty(actual)}\nExpected: ${pretty(expectedValue)}`);
     }
   }
 
@@ -83,8 +87,8 @@ export default class Grader {
       } catch {}
     }
     this.deductPoints(points, `${message}; Unexpected results.`,
-      'Expected one of the following:\n- ' +
-      expectedValues.map(e => JSON.stringify(e, null, 2)).join('\n- '));
+      `Received: ${pretty(actual)}\nExpected one of the following:\n- ` +
+      expectedValues.map(pretty).join('\n- '));
   }
 
   /**
@@ -105,7 +109,11 @@ export default class Grader {
       throw new TypeError('If expectedType is provided, typePoints must be provided as well.');
     try {
       const result = await testCase();
-      this.deductPoints(points, `${message}; Expected an error to be thrown, got a result instead.`, result);
+      this.deductPoints(
+        points,
+        `${message}; Expected an error to be thrown, got a result instead.`,
+        pretty(result)
+      );
     } catch (e) {
       if (!expectedMessage && !expectedType) return;
       let deducted = 0;
@@ -135,7 +143,8 @@ export default class Grader {
    * @returns {*}
    */
   async importFile(file) {
-    return await import(path.join(this.directory, file));
+    const href = pathToFileURL(path.join(this.directory, file)).href;
+    return await import(href);
   }
 
   /**
@@ -154,10 +163,10 @@ export default class Grader {
    * Called internally by the grading framework.
    */
   async checks() {
-    const requiredFiles = Object.fromEntries(
+    const files = Object.fromEntries(
       this.requiredFiles.map(file => [file, false])
     );
-    const entries = await fs.readdir(current, {
+    const entries = await fs.readdir(this.directory, {
       recursive: true,
       withFileTypes: true
     });
@@ -174,8 +183,8 @@ export default class Grader {
         this.packageJson = await import(filePath, { assert: { type: 'json' } });
         continue;
       }
-      if (requiredFiles[entry.name] !== undefined) {
-        requiredFiles[entry.name] = true;
+      if (files[entry.name] !== undefined) {
+        files[entry.name] = true;
         if (!this.packageJson) this.directory = entry.path;
       }
     }
@@ -197,8 +206,8 @@ export default class Grader {
         }
       }
     }
-    const missingFiles = requiredFiles.entries()
-      .filter(([_, found]) => found)
+    const missingFiles = Object.entries(files)
+      .filter(([_, found]) => !found)
       .map(([file, _]) => file)
       .join(', ');
     if (missingFiles) throw new Error('Missing file(s): ' + missingFiles);

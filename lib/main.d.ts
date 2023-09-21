@@ -45,7 +45,7 @@ export type CanvasConfig = {
 * @param {CanvasConfig} [canvasConfig] Canvas credentials
 * @returns {void}
 */
-export function autoGrade(submissionsDir: string, GraderClass: Grader, assignmentConfig?: AssignmentConfig, canvasConfig?: CanvasConfig): void;
+export function autoGrade(submissionsDir: string, GraderClass: Grader, assignmentConfig?: AssignmentConfig, canvasConfig?: CanvasConfig): Promise<void>;
 
 /**
  * Do not instantiate this class. Extend it and implement
