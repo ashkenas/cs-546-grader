@@ -141,14 +141,45 @@ export default class Grader {
   }
 
   /**
-   * Import a javascript file from a relative location in the student
-   * submission.
-   * @param {string} file Relative file path from submission root
-   * @returns {*}
+   * Builds a file URL from a relative file path for a file in a submission
+   * @param {string} relativeFile Relative file path from submission root
+   * @param {boolean} url Whether the returned path should be a URL
    */
-  async importFile(file) {
-    const href = pathToFileURL(path.join(this.directory, file)).href;
-    return await import(`${href}?invalidateCache=${uid()}`);
+  buildAbsoluteFilePath(relativeFile, url) {
+    const absolutePath = path.resolve(path.join(this.directory, relativeFile));
+    if (!url) return absolutePath;
+    const href = pathToFileURL(absolutePath).href;
+    return `${href}?invalidateCache=${uid()}`;
+  }
+
+  /**
+   * Import a JSON file from a relative location in the student submission.
+   * @param {string} relativePath Relative file path from submission root
+   * @returns {Promise<*>}
+   */
+  async importJSON(relativePath) {
+    try {
+      return JSON.parse(
+        await fs.readFile(
+          this.buildAbsoluteFilePath(relativePath, false), {
+            encoding: 'utf8'
+          }
+        )
+      );
+    } catch (e) {
+      if (e instanceof SyntaxError)
+        throw `Malformed JSON syntax in '${relativePath}'`;
+      throw e;
+    }
+  }
+
+  /**
+   * Import a javascript file from a relative location in the student submission.
+   * @param {string} relativePath Relative file path from submission root
+   * @returns {Promise<*>}
+   */
+  async importFile(relativePath) {
+    return await import(this.buildAbsoluteFilePath(relativePath, true));
   }
 
   /**
@@ -183,8 +214,8 @@ export default class Grader {
       if (this.hadModules && entry.path.includes('node_modules')) continue;
       const filePath = path.join('current_submission', entry.path, entry.name);
       if (entry.name === 'package.json') {
-        this.directory = path.join('current_submission', entry.path);
-        this.packageJson = await import(filePath, { assert: { type: 'json' } });
+        this.directory = entry.path;
+        this.packageJson = await this.importJSON('package.json');
         continue;
       }
       if (files[entry.name] !== undefined) {
@@ -203,6 +234,7 @@ export default class Grader {
           this.module = false;
         if (this.packageJson.author) this.author = this.packageJson.author;
         if (!this.packageJson.scripts || !this.packageJson.scripts.start) {
+          console.log(this.packageJson);
           this.deductPoints(5, 'Missing start script in package.json file.');
           if (!this.defaultStartScript && this.runStartScript)
             throw new Error('Student did not provide start script and no default was provided.');
@@ -215,7 +247,8 @@ export default class Grader {
       .map(([file, _]) => file)
       .join(', ');
     if (missingFiles) throw new Error('Missing file(s): ' + missingFiles);
-    if (this.checkPackage) execSync('npm i', { cwd: this.directory });
+    if (this.packageJson && this.packageJson.dependencies)
+      execSync('npm i', { cwd: this.directory });
   }
 
   /**

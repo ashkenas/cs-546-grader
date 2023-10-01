@@ -102,12 +102,23 @@ export class Grader {
    */
   assertDeepEqualsOptions(points: number, message: string, testCase: (() => T), expectedValues: T[]): Promise<void>;
   /**
-   * Import a javascript file from a relative location in the student
-   * submission.
-   * @param {string} file Relative file path from submission root
-   * @returns {*}
+   * Builds a file URL from a relative file path for a file in a submission
+   * @param {string} relativeFile Relative file path from submission root
+   * @param {boolean} url Whether the returned path should be a URL
    */
-  importFile(file: string): any;
+  buildAbsoluteFilePath(relativeFile: string, url: boolean): string
+  /**
+   * Import a JSON file from a relative location in the student submission.
+   * @param {string} relativePath Relative file path from submission root
+   * @returns {Promise<*>}
+   */
+  importJSON(relativePath: string): Promise<any>;
+  /**
+   * Import a javascript file from a relative location in the student submission.
+   * @param {string} relativePath Relative file path from submission root
+   * @returns {Promise<*>}
+   */
+  importFile(relativePath: string): Promise<any>;
   /**
    * Called internally by the grading framework.
    */
