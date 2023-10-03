@@ -23,7 +23,7 @@ export default class Grader {
     this.checkPackage = assignmentConfig.checkPackage ?? true;
     this.packageJson = null;
     this.hadModules = false;
-    this.directory = assignmentConfig.directory;
+    this.directory = 'current_submission';
     this.author = 'NO AUTHOR';
     this.module = true;
     this.startScript = 'npm start';

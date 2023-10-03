@@ -60,10 +60,7 @@ async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasCo
       await fs.rm('current_submission', { recursive: true, force: true });
       const zip = new Zip(fileLoc);
       zip.extractAllTo(subDir);
-      const grader = new GraderClass(Object.assign(
-        assignmentConfig || {},
-        { directory: subDir }
-      ));
+      const grader = new GraderClass(assignmentConfig);
       const { grade, comments } = await grader.run();
       console.log(`Done. Scored ${c.success(grade)}`);
       if (!canvas) console.log(c.error(comments));
