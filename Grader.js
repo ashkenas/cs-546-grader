@@ -23,7 +23,7 @@ export default class Grader {
     this.checkPackage = assignmentConfig.checkPackage ?? true;
     this.packageJson = null;
     this.hadModules = false;
-    this.directory = 'current_submission';
+    this.directory = assignmentConfig.directory;
     this.author = 'NO AUTHOR';
     this.module = true;
     this.startScript = 'npm start';
@@ -212,7 +212,6 @@ export default class Grader {
         continue;
       }
       if (this.hadModules && entry.path.includes('node_modules')) continue;
-      const filePath = path.join('current_submission', entry.path, entry.name);
       if (entry.name === 'package.json') {
         this.directory = entry.path;
         this.packageJson = await this.importJSON('package.json');
