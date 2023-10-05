@@ -24,9 +24,9 @@ export default class Grader {
     this.packageJson = null;
     this.hadModules = false;
     this.directory = 'current_submission';
-    this.author = 'NO AUTHOR';
+    this.author = '';
     this.module = true;
-    this.startScript = 'npm start';
+    this.startScript = 'node app.js';
     this.subprocess = null;
     this.score = 100;
     this.comments = [];
@@ -179,7 +179,8 @@ export default class Grader {
    * @returns {Promise<*>}
    */
   async importFile(relativePath) {
-    return await import(this.buildAbsoluteFilePath(relativePath, true));
+    const file = await import(this.buildAbsoluteFilePath(relativePath, true))
+    return file.default ? file.default : file;
   }
 
   /**
