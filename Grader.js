@@ -184,7 +184,7 @@ export default class Grader {
       try {
         file = await import(this.buildAbsoluteFilePath(relativePath, true))
       } catch (e) {
-        if (typeof e !== object || e.code !== 'ERR_MODULE_NOT_FOUND') throw e;
+        if (typeof e !== 'object' || e.code !== 'ERR_MODULE_NOT_FOUND') throw e;
         const [, dependency] =
           e.message.match(/Cannot find package '(.*)' imported from/);
         if ((/[^a-z:_@\-]/).test(dependency))
