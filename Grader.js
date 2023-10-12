@@ -233,7 +233,7 @@ export default class Grader {
         continue;
       }
       if (this.hadModules && entry.path.includes('node_modules')) continue;
-      if (entry.name === 'package.json') {
+      if (entry.name.toLowerCase() === 'package.json') {
         this.directory = entry.path;
         this.packageJson = await this.importJSON('package.json');
         continue;
