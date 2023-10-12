@@ -101,9 +101,3 @@ export {
   autoGrade,
   Grader
 };
-
-try {
-  await import('./test.js')
-} catch (e) {
-  console.error(e.message);
-}
