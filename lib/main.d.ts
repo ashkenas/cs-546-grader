@@ -36,6 +36,10 @@ export type CanvasConfig = {
    * The ID of the Canvas assignment
    */
   assignmentId: string | number;
+  /**
+   * If comments should be uploaded as files
+   */
+  commentsAsFiles?: boolean;
 };
 /**
 * Run the autograder.

@@ -4,6 +4,7 @@ import fs from 'fs/promises';
 import Zip from 'adm-zip';
 import path from 'path';
 import * as c from './ColorUtils.js';
+import { fork } from 'child_process';
 
 const canvasIdRegex = /^[^_]*?(?:_LATE|)_([0-9]+)/;
 
@@ -21,7 +22,30 @@ const canvasIdRegex = /^[^_]*?(?:_LATE|)_([0-9]+)/;
  * @property {string} apiKey The Canvas API key to use for grade uploads
  * @property {string|number} courseId The ID of the Canvas course that the assignment is a part of
  * @property {string|number} assignmentId The ID of the Canvas assignment
+ * @property {boolean} [commentsAsFiles] If comments should be uploaded as files
  */
+
+/**
+ * Attempts to locate where the submission's CWD should be.
+ * @param {string[]} [requiredFiles] Files required by the assignment
+ */
+async function findWorkingDirectory(requiredFiles) {
+  let directory = null;
+  const entries = await fs.readdir('./current_submission', {
+    recursive: true,
+    withFileTypes: true
+  });
+  for (const entry of entries) {
+    if (entry.path.includes('node_modules')) continue;
+    if (entry.name === 'package.json') {
+      directory = entry.path;
+      break;
+    }
+    if (requiredFiles && requiredFiles.includes(entry.name))
+      directory = entry.path;
+  }
+  return directory || 'current_submission';
+};
 
 /**
  * Run the autograder.
@@ -31,7 +55,8 @@ const canvasIdRegex = /^[^_]*?(?:_LATE|)_([0-9]+)/;
  * @param {CanvasConfig} [canvasConfig] Canvas credentials
  * @returns {void}
  */
-async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasConfig) {
+async function autoGrade(submissionsDir, graderModule, assignmentConfig, canvasConfig) {
+  graderModule = path.resolve(graderModule);
   if (assignmentConfig?.onlyCurrent) {
     const { grade, comments } = await new GraderClass(assignmentConfig).run();
     console.log('Score: ' + c.success(grade));
@@ -60,8 +85,18 @@ async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasCo
       await fs.rm('current_submission', { recursive: true, force: true });
       const zip = new Zip(fileLoc);
       zip.extractAllTo(subDir);
-      const grader = new GraderClass(assignmentConfig);
-      const { grade, comments } = await grader.run();
+      const forkedGrader = fork(graderModule, {
+        cwd: await findWorkingDirectory(assignmentConfig?.requiredFiles)
+      });
+      const results = await new Promise((resolve, reject) => {
+        let m;
+        forkedGrader.on('error', reject);
+        forkedGrader.on('message', (message) => m = message);
+        forkedGrader.send(assignmentConfig);
+        forkedGrader.on('exit', () => resolve(m));
+      });
+      if (results.error) throw new Error(results.error);
+      const { grade, comments } = results;
       console.log(`Done. Scored ${c.success(grade)}`);
       if (!canvas) console.log(c.error(comments));
       else {
@@ -81,7 +116,7 @@ async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasCo
     console.log(c.warning('------------------------------'));
   }
   if (canvas && students.length) {
-    await canvas.sendUpdate(assignmentConfig?.commentsAsFiles);
+    await canvas.sendUpdate(canvasConfig.commentsAsFiles);
     console.log(c.success('Uploaded grades for the following students:'));
     const uploadedDir = path.join(submissionsDir, 'uploaded');
     await fs.mkdir(uploadedDir, { recursive: true });

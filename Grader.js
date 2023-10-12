@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { spawn, execSync, exec } from 'child_process';
+import { spawn, exec } from 'child_process';
 import { deepStrictEqual } from 'assert';
 import { pathToFileURL } from 'url';
 
@@ -23,13 +23,30 @@ export default class Grader {
     this.checkPackage = assignmentConfig.checkPackage ?? true;
     this.packageJson = null;
     this.hadModules = false;
-    this.directory = 'current_submission';
+    this.directory = process.cwd();
     this.author = '';
     this.module = true;
     this.startScript = 'node app.js';
     this.subprocess = null;
     this.score = 100;
     this.comments = [];
+  }
+
+  /**
+   * Run grading in forked subprocess
+   */
+  static pipe() {
+    process.on('message', async (message) => {
+      try {
+        process.send(await (new this(message)).run())
+        process.exit(0);
+      } catch (e) {
+        process.send({
+          error: e.message || e
+        });
+        process.exit(1);
+      }
+    });
   }
 
   /**
@@ -179,27 +196,31 @@ export default class Grader {
    * @returns {Promise<*>}
    */
   async importFile(relativePath) {
-    const file = await import(this.buildAbsoluteFilePath(relativePath, true))
-    // while (!file) {
-    //   try {
-    //     file = await import(this.buildAbsoluteFilePath(relativePath, true))
-    //   } catch (e) {
-    //     if (typeof e !== 'object' || e.code !== 'ERR_MODULE_NOT_FOUND') throw e;
-    //     const [, dependency] =
-    //       e.message.match(/Cannot find package '(.*)' imported from/);
-    //     if ((/[^a-z:_@\-]/).test(dependency))
-    //       throw new Error(`Invalid missing package imported: '${dependency}'`);
-    //     await new Promise((resolve, reject) => {
-    //       exec(`npm i ${dependency}`, {
-    //         cwd: this.directory
-    //       }, (err) => {
-    //         if (err) return reject(err);
-    //         resolve();
-    //       });
-    //     });
-    //     this.deductPoints(5, `Dependency '${dependency}' missing from package.json.`);
-    //   }
-    // }
+    let file;// = await import(this.buildAbsoluteFilePath(relativePath, true))
+    let lastDep;
+    while (!file) {
+      try {
+        file = await import(this.buildAbsoluteFilePath(relativePath, true))
+      } catch (e) {
+        if (typeof e !== 'object' || e.code !== 'ERR_MODULE_NOT_FOUND') throw e;
+        const [, dependency] =
+          e.message.match(/Cannot find package '(.*)' imported from/);
+        if (lastDep === dependency)
+          throw new Error(`Couldn't automatically install dependency: '${dependency}'`);
+        lastDep = dependency;
+        if ((/[^a-z:_@\-]/).test(dependency))
+          throw new Error(`Invalid missing package imported: '${dependency}'`);
+        await new Promise((resolve, reject) => {
+          exec(`npm i ${dependency}`, {
+            cwd: this.directory
+          }, (err) => {
+            if (err) return reject(err);
+            resolve();
+          });
+        });
+        this.deductPoints(5, `Dependency '${dependency}' missing from package.json.`);
+      }
+    }
     return file.default ? file.default : file;
   }
 
@@ -233,14 +254,12 @@ export default class Grader {
         continue;
       }
       if (this.hadModules && entry.path.includes('node_modules')) continue;
-      if (entry.name === 'package.json') {
-        this.directory = entry.path;
+      if (entry.name.toLowerCase() === 'package.json') {
         this.packageJson = await this.importJSON('package.json');
         continue;
       }
       if (files[entry.name] !== undefined) {
         files[entry.name] = true;
-        if (!this.packageJson) this.directory = entry.path;
       }
     }
     if (this.checkPackage) {
@@ -267,8 +286,14 @@ export default class Grader {
       .map(([file, _]) => file)
       .join(', ');
     if (missingFiles) throw new Error('Missing file(s): ' + missingFiles);
-    if (this.packageJson && this.packageJson.dependencies)
-      execSync('npm i', { cwd: this.directory });
+    if (this.packageJson && this.packageJson.dependencies) {
+      await new Promise((resolve, reject) => {
+        exec('npm i'/*, { cwd: this.directory }*/, (err) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+    }
   }
 
   /**
