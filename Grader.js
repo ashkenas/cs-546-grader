@@ -179,27 +179,27 @@ export default class Grader {
    * @returns {Promise<*>}
    */
   async importFile(relativePath) {
-    let file;
-    while (!file) {
-      try {
-        file = await import(this.buildAbsoluteFilePath(relativePath, true))
-      } catch (e) {
-        if (typeof e !== 'object' || e.code !== 'ERR_MODULE_NOT_FOUND') throw e;
-        const [, dependency] =
-          e.message.match(/Cannot find package '(.*)' imported from/);
-        if ((/[^a-z:_@\-]/).test(dependency))
-          throw new Error(`Invalid missing package imported: '${dependency}'`);
-        await new Promise((resolve, reject) => {
-          exec(`npm i ${dependency}`, {
-            cwd: this.directory
-          }, (err) => {
-            if (err) return reject(err);
-            resolve();
-          });
-        });
-        this.deductPoints(5, `Dependency '${dependency}' missing from package.json.`);
-      }
-    }
+    const file = await import(this.buildAbsoluteFilePath(relativePath, true))
+    // while (!file) {
+    //   try {
+    //     file = await import(this.buildAbsoluteFilePath(relativePath, true))
+    //   } catch (e) {
+    //     if (typeof e !== 'object' || e.code !== 'ERR_MODULE_NOT_FOUND') throw e;
+    //     const [, dependency] =
+    //       e.message.match(/Cannot find package '(.*)' imported from/);
+    //     if ((/[^a-z:_@\-]/).test(dependency))
+    //       throw new Error(`Invalid missing package imported: '${dependency}'`);
+    //     await new Promise((resolve, reject) => {
+    //       exec(`npm i ${dependency}`, {
+    //         cwd: this.directory
+    //       }, (err) => {
+    //         if (err) return reject(err);
+    //         resolve();
+    //       });
+    //     });
+    //     this.deductPoints(5, `Dependency '${dependency}' missing from package.json.`);
+    //   }
+    // }
     return file.default ? file.default : file;
   }
 
