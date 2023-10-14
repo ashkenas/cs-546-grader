@@ -243,6 +243,7 @@ export default class Grader {
         if (!this.packageJson) this.directory = entry.path;
       }
     }
+    this.directory = path.resolve(this.directory);
     if (this.checkPackage) {
       if (!this.packageJson) {
         this.deductPoints(5, 'Missing package.json file.');
@@ -284,7 +285,8 @@ export default class Grader {
   async run() {
     await this.checks();
     if (this.runStartScript)
-      await this.start();
+    await this.start();
+    process.chdir(this.directory);
     await this.testCases();
     await this.cleanup();
     return {
