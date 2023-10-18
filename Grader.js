@@ -3,6 +3,7 @@ import path from 'path';
 import { spawn, execSync } from 'child_process';
 import { deepStrictEqual } from 'assert';
 import { pathToFileURL } from 'url';
+import { MongoClient } from 'mongodb';
 
 /**
  * HTTP request verb
@@ -24,8 +25,11 @@ export default class Grader {
     assignmentConfig = assignmentConfig || {};
     this.requiredFiles = assignmentConfig.requiredFiles || [];
     this.defaultStartScript = assignmentConfig.startScript || null;
-    this.runStartScript = assignmentConfig.runStartScript || false;
+    this.runStartScript = assignmentConfig.runStartScript;
     this.checkPackage = assignmentConfig.checkPackage ?? true;
+    this.hasDatabase = assignmentConfig.hasDatabase;
+    this.connectionString = assignmentConfig.connectionString
+      || 'mongodb://localhost:27017/';
     this.packageJson = null;
     this.hadModules = false;
     this.directory = 'current_submission';
@@ -33,8 +37,10 @@ export default class Grader {
     this.module = true;
     this.startScript = 'node app.js';
     this.subprocess = null;
+    this.db = null;
     this.score = 100;
     this.comments = [];
+    this.uid = uid();
   }
 
   /**
@@ -206,6 +212,35 @@ export default class Grader {
   }
 
   /**
+   * Runs a provided assertion, removing the _id attribute from the result
+   * of `testCase()` first and then returning it after the assertion completes.
+   * @param {number} points Points the test case is worth.
+   * @param {string} message Message to print before error text.
+   * @param {*} testCase Test case to post-process.
+   * @param {*} expectedValue Expected value(s) to pass to the assertion
+   * @param {*} assertion 
+   * @returns {string} The _id field from `testCase()`
+   */
+  async assertWithoutId(points, message, testCase, expectedValue, assertion) {
+    let _id;
+    await assertion.call(
+      this,
+      points,
+      message,
+      async () => {
+        const res = await testCase();
+        if (res && typeof res === 'object') {
+          _id = res._id;
+          delete res._id;
+        }
+        return res;
+      },
+      expectedValue
+    );
+    return _id;
+  }
+
+  /**
    * Asserts that a request response has a certain status code.
    * @param {number} points Points the test case is worth
    * @param {string} url URL to request
@@ -233,7 +268,7 @@ export default class Grader {
     const absolutePath = path.resolve(path.join(this.directory, relativeFile));
     if (!url) return absolutePath;
     const href = pathToFileURL(absolutePath).href;
-    return `${href}?invalidateCache=${uid()}`;
+    return `${href}?invalidateCache=${this.uid}`;
   }
 
   /**
@@ -337,6 +372,17 @@ export default class Grader {
   }
 
   /**
+   * Sets up the grader for database access
+   */
+  async setupDatabase() {
+    const settings = await this.importFile('config/settings.js');
+    settings.connectionString = this.connectionString;
+    this.database = settings.database;
+    this.client = await MongoClient.connect(this.connectionString);
+    this.db = this.client.db(this.database);
+  }
+
+  /**
    * Override this with assignment-specific implementation.
    */
   async testCases() {
@@ -348,8 +394,10 @@ export default class Grader {
    */
   async run() {
     await this.checks();
+    if (this.hasDatabase)
+      await this.setupDatabase();
     if (this.runStartScript)
-    await this.start();
+      await this.start();
     process.chdir(this.directory);
     await this.testCases();
     await this.cleanup();
@@ -368,6 +416,14 @@ export default class Grader {
         recursive: true,
         force: true
       });
+    }
+    if (this.hasDatabase) {
+      await this.db.dropDatabase();
+      await this.client.close(true);
+      try {
+        const { closeConnection } = await this.importFile('config/mongoConnection.js');
+        await closeConnection();
+      } catch {}
     }
     if (this.subprocess)
       if (!this.subprocess.kill())

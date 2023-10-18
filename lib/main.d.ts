@@ -22,6 +22,14 @@ export type AssignmentConfig = {
    * Specifies if the package.json file should be checked for existence and required properties. Default is true.
    */
   checkPackage?: boolean;
+  /**
+   * Whether or not to enable database grading features. Default is false.
+   */
+  hasDatabase?: boolean;
+  /**
+   * MongoDB connection string. Default is 'mongodb://localhost:27017/'.
+   */
+  connectionString?: string;
 };
 export type CanvasConfig = {
   /**
@@ -118,6 +126,17 @@ export class Grader {
    * @param {any} expectedValue Expected response body (can be any type)
    */
   assertRequestDeepEquals(points: number, url: string, method: Verb, body: any, expectedValue: any): Promise<void>;
+  /**
+   * Runs a provided assertion, removing the _id attribute from the result
+   * of `testCase()` first and then returning it after the assertion completes.
+   * @param {number} points Points the test case is worth.
+   * @param {string} message Message to print before error text.
+   * @param {any} testCase Test case to post-process.
+   * @param {any} expectedValue Expected value(s) to pass to the assertion
+   * @param {any} assertion 
+   * @returns {string} The _id field from `testCase()`
+   */
+  assertWithoutId(points: number, message: string, testCase: any, expectedValue: any, assertion: any): Promise<string>;
   /**
    * Builds a file URL from a relative file path for a file in a submission
    * @param {string} relativeFile Relative file path from submission root

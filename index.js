@@ -10,10 +10,12 @@ const canvasIdRegex = /^[^_]*?(?:_LATE|)_([0-9]+)/;
 /**
  * @typedef AssignmentConfig
  * @property {boolean} [onlyCurrent] Only run the submission in the current_submission directory. Default is false.
- * @property {string} [startScript] The default start script to use if the student doesn't write one. Default is 'npm start'.
+ * @property {string} [startScript] The default start script to use if the student doesn't write one. Default is 'node app.js'.
  * @property {boolean} [runStartScript] Specifies if the start script should be executed before running the test cases. Default is false.
  * @property {string[]} [requiredFiles] Names of all the files (including extensions) that must be present in the submission. Grading will fail if any are absent.
  * @property {boolean} [checkPackage] Specifies if the package.json file should be checked for existence and required properties. Default is true.
+ * @property {boolean} [hasDatabase] Whether or not to enable database grading features. Default is false.
+ * @property {boolean} [connectionString] MongoDB connection string to use. Default is 'mongodb://localhost:27017/'.
  */
 
 /**
