@@ -1,8 +1,13 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { spawn, execSync, exec } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { deepStrictEqual } from 'assert';
 import { pathToFileURL } from 'url';
+
+/**
+ * HTTP request verb
+ * @typedef {'GET'|'POST'|'PATCH'|'PUT'|'DELETE'} Verb
+ */
 
 const pretty = data => JSON.stringify(data, null, 2);
 const uid = (() => {
@@ -141,6 +146,85 @@ export default class Grader {
   }
 
   /**
+   * Make a request and get the response status and body.
+   * @param {string} url The URL to make a request to
+   * @param {Verb} [method] Request method to use (default 'GET')
+   * @param {*} [body] Request body (automatically stringified if necessary)
+   * @returns {Promise<[number,string]>}
+   */
+  async request(url, method = 'GET', body = '') {
+    const options = { method: method };
+    if (typeof body !== 'string') {
+      options.headers = {
+        'Content-Type': 'application/json'
+      };
+      body = pretty(body);
+    }
+    options.body = body;
+    const res = await fetch(url, options)
+    return [res.status, await res.text()];
+  }
+
+  /**
+   * Asserts that a response is ok (status 200) and has the specified body.
+   * @param {number} points Points the test case is worth
+   * @param {string} url URL to request
+   * @param {Verb} method Request method to use 
+   * @param {*} body Request body (stringified automatically if needed)
+   * @param {*} expectedValue Expected response body (can be any type)
+   */
+  async assertRequestDeepEquals(points, url, method, body, expectedValue) {
+    const testCaseText = `${method.toUpperCase()} ${url}`;
+    const [status, text] = await this.request(url, method, body);
+    if (status !== 200) {
+      this.deductPoints(
+        points,
+        testCaseText,
+        `Route did not return an OK (200) status code.`
+      );
+      return;
+    }
+    let actual = text;
+    if (typeof expectedValue !== 'string') {
+      try {
+        actual = JSON.parse(actual);
+      } catch(e) {
+        this.deductPoints(
+          points,
+          testCaseText,
+          `Invalid response body:\n${text}`
+        );
+        return;
+      }
+    }
+    await this.assertDeepEquals(
+      points,
+      testCaseText,
+      () => actual,
+      expectedValue
+    );
+  }
+
+  /**
+   * Asserts that a request response has a certain status code.
+   * @param {number} points Points the test case is worth
+   * @param {string} url URL to request
+   * @param {Verb} method Request method to use 
+   * @param {*} body Request body (stringified automatically if needed)
+   * @param {number} expectedStatus Status code that response should have
+   * @returns {Promise<void>}
+   */
+  async assertRequestStatus(points, url, method, body, expectedStatus) {
+    const [status] = await this.request(url, method, body);
+    if (status === expectedStatus) return;
+    this.deductPoints(
+      points,
+      `${method.toUpperCase()} ${url}`,
+      `Received status: ${status}\nExpected status: ${expectedStatus}`
+    );
+  }
+
+  /**
    * Builds a file URL from a relative file path for a file in a submission
    * @param {string} relativeFile Relative file path from submission root
    * @param {boolean} url Whether the returned path should be a URL
@@ -180,26 +264,6 @@ export default class Grader {
    */
   async importFile(relativePath) {
     const file = await import(this.buildAbsoluteFilePath(relativePath, true))
-    // while (!file) {
-    //   try {
-    //     file = await import(this.buildAbsoluteFilePath(relativePath, true))
-    //   } catch (e) {
-    //     if (typeof e !== 'object' || e.code !== 'ERR_MODULE_NOT_FOUND') throw e;
-    //     const [, dependency] =
-    //       e.message.match(/Cannot find package '(.*)' imported from/);
-    //     if ((/[^a-z:_@\-]/).test(dependency))
-    //       throw new Error(`Invalid missing package imported: '${dependency}'`);
-    //     await new Promise((resolve, reject) => {
-    //       exec(`npm i ${dependency}`, {
-    //         cwd: this.directory
-    //       }, (err) => {
-    //         if (err) return reject(err);
-    //         resolve();
-    //       });
-    //     });
-    //     this.deductPoints(5, `Dependency '${dependency}' missing from package.json.`);
-    //   }
-    // }
     return file.default ? file.default : file;
   }
 

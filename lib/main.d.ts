@@ -37,6 +37,7 @@ export type CanvasConfig = {
    */
   assignmentId: string | number;
 };
+export type Verb = 'GET'|'POST'|'PATCH'|'PUT'|'DELETE';
 /**
 * Run the autograder.
 * @param {string} submissionsDir Directory containing all student submissions as zip files
@@ -102,21 +103,35 @@ export class Grader {
    */
   assertDeepEqualsOptions<T>(points: number, message: string, testCase: (() => T), expectedValues: T[]): Promise<void>;
   /**
+   * Make a request and get the response status and body.
+   * @param {string} url The URL to make a request to
+   * @param {Verb} [method] Request method to use (default 'GET')
+   * @param {any} [body] Request body (automatically stringified if necessary)
+   */
+  request(url: string, method: Verb, body: any): Promise<[number, string]>;
+  /**
+   * Asserts that a response is ok (status 200) and has the specified body.
+   * @param {number} points Points the test case is worth
+   * @param {string} url URL to request
+   * @param {Verb} method Request method to use 
+   * @param {any} body Request body (stringified automatically if needed)
+   * @param {any} expectedValue Expected response body (can be any type)
+   */
+  assertRequestDeepEquals(points: number, url: string, method: Verb, body: any, expectedValue: any): Promise<void>;
+  /**
    * Builds a file URL from a relative file path for a file in a submission
    * @param {string} relativeFile Relative file path from submission root
    * @param {boolean} url Whether the returned path should be a URL
    */
-  buildAbsoluteFilePath(relativeFile: string, url: boolean): string
+  buildAbsoluteFilePath(relativeFile: string, url: boolean): string;
   /**
    * Import a JSON file from a relative location in the student submission.
    * @param {string} relativePath Relative file path from submission root
-   * @returns {Promise<*>}
    */
   importJSON(relativePath: string): Promise<any>;
   /**
    * Import a javascript file from a relative location in the student submission.
    * @param {string} relativePath Relative file path from submission root
-   * @returns {Promise<*>}
    */
   importFile(relativePath: string): Promise<any>;
   /**
