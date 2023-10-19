@@ -1,5 +1,5 @@
 import { BulkGradeUpdater } from 'canvas-scripts';
-import Grader from './Grader.js';
+import Grader, { stringify } from './Grader.js';
 import fs from 'fs/promises';
 import Zip from 'adm-zip';
 import path from 'path';
@@ -54,10 +54,10 @@ async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasCo
   }
   const students = [];
   const subs = await fs.readdir(submissionsDir);
+  const originalDir = process.cwd();
   for (const sub of subs.filter(file => file.endsWith('.zip'))) {
     const fileLoc = path.join(submissionsDir, sub);
     const subDir = path.join('current_submission', sub.substring(0, sub.length - 4));
-    const originalDir = process.cwd();
     try {
       process.chdir(originalDir);
       console.log(`Grading ${c.info(sub)}...`);
@@ -80,7 +80,7 @@ async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasCo
       }
     } catch (e) {
       console.error(c.error('Could not automatically grade submission.'));
-      console.error(c.error(e));
+      console.error(c.error(e.stack));
     }
     console.log(c.warning('------------------------------'));
   }
@@ -103,5 +103,6 @@ async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasCo
 
 export {
   autoGrade,
-  Grader
+  Grader,
+  stringify
 };

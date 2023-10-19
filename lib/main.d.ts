@@ -75,6 +75,7 @@ export class Grader {
   subprocess: import("node:child_process").ChildProcessWithoutNullStreams;
   score: number;
   comments: any[];
+  db: import("mongodb").Db;
   /**
    * Deduct points from the student's grade.
    * @param {number} points Points to deduct
@@ -134,7 +135,7 @@ export class Grader {
    * @param {any} testCase Test case to post-process.
    * @param {any} expectedValue Expected value(s) to pass to the assertion
    * @param {any} assertion 
-   * @returns {string} The _id field from `testCase()`
+   * @returns {Promise<string>} The _id field from `testCase()`
    */
   assertWithoutId(points: number, message: string, testCase: any, expectedValue: any, assertion: any): Promise<string>;
   /**
@@ -177,3 +178,10 @@ export class Grader {
    */
   cleanup(): Promise<void>;
 }
+
+/**
+ * Take in an object and stringifies it. Uses special notation
+ * to reveal unprocessed ObjectIds.
+ * @param obj Object to stringify
+ */
+export function stringify(obj: any): string;

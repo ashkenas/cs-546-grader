@@ -3,14 +3,19 @@ import path from 'path';
 import { spawn, execSync } from 'child_process';
 import { deepStrictEqual } from 'assert';
 import { pathToFileURL } from 'url';
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 
 /**
  * HTTP request verb
  * @typedef {'GET'|'POST'|'PATCH'|'PUT'|'DELETE'} Verb
  */
 
-const pretty = data => JSON.stringify(data, null, 2);
+export const stringify = (obj, spacing = undefined) => JSON.stringify(obj, (_, value) => {
+  if (value instanceof ObjectId)
+    return { oid: value.toString() };
+  return value;
+}, spacing);
+const pretty = data => stringify(data, 2);
 const uid = (() => {
   let id = 0;
   return () => id++;
@@ -219,7 +224,7 @@ export default class Grader {
    * @param {*} testCase Test case to post-process.
    * @param {*} expectedValue Expected value(s) to pass to the assertion
    * @param {*} assertion 
-   * @returns {string} The _id field from `testCase()`
+   * @returns {Promise<string>} The _id field from `testCase()`
    */
   async assertWithoutId(points, message, testCase, expectedValue, assertion) {
     let _id;
@@ -231,6 +236,10 @@ export default class Grader {
         const res = await testCase();
         if (res && typeof res === 'object') {
           _id = res._id;
+          if (typeof _id !== 'string'
+            || _id.length !== 24
+            || !(/[a-f0-9]{24}/).test(_id))
+            throw "Invalid value provided for '_id'.";
           delete res._id;
         }
         return res;
@@ -375,8 +384,8 @@ export default class Grader {
    * Sets up the grader for database access
    */
   async setupDatabase() {
-    const settings = await this.importFile('config/settings.js');
-    settings.connectionString = this.connectionString;
+    const settings = (await this.importFile('config/settings.js')).mongoConfig;
+    settings.serverUrl = this.connectionString;
     this.database = settings.database;
     this.client = await MongoClient.connect(this.connectionString);
     this.db = this.client.db(this.database);
