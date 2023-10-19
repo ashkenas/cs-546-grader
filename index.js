@@ -85,6 +85,7 @@ async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasCo
     console.log(c.warning('------------------------------'));
   }
   if (canvas && students.length) {
+    process.chdir(originalDir);
     await canvas.sendUpdate(assignmentConfig?.commentsAsFiles);
     console.log(c.success('Uploaded grades for the following students:'));
     const uploadedDir = path.join(submissionsDir, 'uploaded');
