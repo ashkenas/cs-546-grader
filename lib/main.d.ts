@@ -142,8 +142,9 @@ export class Grader {
    * Builds a file URL from a relative file path for a file in a submission
    * @param {string} relativeFile Relative file path from submission root
    * @param {boolean} url Whether the returned path should be a URL
+   * @param {boolean} [oneTime] Generate a fresh cache parameter for invalidation
    */
-  buildAbsoluteFilePath(relativeFile: string, url: boolean): string;
+  buildAbsoluteFilePath(relativeFile: string, url: boolean, oneTime?: boolean): string;
   /**
    * Import a JSON file from a relative location in the student submission.
    * @param {string} relativePath Relative file path from submission root
@@ -152,8 +153,9 @@ export class Grader {
   /**
    * Import a javascript file from a relative location in the student submission.
    * @param {string} relativePath Relative file path from submission root
+   * @param {boolean} [oneTime] Bypasses the cache and does a fresh import
    */
-  importFile(relativePath: string): Promise<any>;
+  importFile(relativePath: string, oneTime?: boolean): Promise<any>;
   /**
    * Called internally by the grading framework.
    */

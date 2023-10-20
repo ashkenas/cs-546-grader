@@ -272,12 +272,13 @@ export default class Grader {
    * Builds a file URL from a relative file path for a file in a submission
    * @param {string} relativeFile Relative file path from submission root
    * @param {boolean} url Whether the returned path should be a URL
+   * @param {boolean} oneTime Generate a fresh cache parameter for invalidation
    */
-  buildAbsoluteFilePath(relativeFile, url) {
+  buildAbsoluteFilePath(relativeFile, url, oneTime) {
     const absolutePath = path.resolve(path.join(this.directory, relativeFile));
     if (!url) return absolutePath;
     const href = pathToFileURL(absolutePath).href;
-    return `${href}?invalidateCache=${this.uid}`;
+    return `${href}?invalidateCache=${oneTime ? uid() : this.uid}`;
   }
 
   /**
@@ -304,10 +305,11 @@ export default class Grader {
   /**
    * Import a javascript file from a relative location in the student submission.
    * @param {string} relativePath Relative file path from submission root
+   * @param {boolean} [oneTime] Bypasses the cache and does a fresh import
    * @returns {Promise<*>}
    */
-  async importFile(relativePath) {
-    const file = await import(this.buildAbsoluteFilePath(relativePath, true))
+  async importFile(relativePath, oneTime) {
+    const file = await import(this.buildAbsoluteFilePath(relativePath, true, oneTime))
     return file.default ? file.default : file;
   }
 
@@ -384,9 +386,16 @@ export default class Grader {
    * Sets up the grader for database access
    */
   async setupDatabase() {
-    const settings = (await this.importFile('config/settings.js')).mongoConfig;
+    const settings = (await this.importFile('config/settings.js', true)).mongoConfig;
     settings.serverUrl = this.connectionString;
     this.database = settings.database;
+    await fs.writeFile(this.buildAbsoluteFilePath('config/settings.js'),
+`export const mongoConfig = {
+  serverUrl: "${settings.serverUrl}",
+  database: "${settings.database}"
+}
+`
+    );
     this.client = await MongoClient.connect(this.connectionString);
     this.db = this.client.db(this.database);
   }
