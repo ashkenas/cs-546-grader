@@ -4,7 +4,7 @@ import { spawn, execSync } from 'child_process';
 import { deepStrictEqual } from 'assert';
 import { pathToFileURL } from 'url';
 import { MongoClient, ObjectId } from 'mongodb';
-import { FatalGraderError } from './Utils';
+import { FatalGraderError } from './Utils.js';
 
 /**
  * HTTP request verb
