@@ -4,6 +4,7 @@ import fs from 'fs/promises';
 import Zip from 'adm-zip';
 import path from 'path';
 import * as c from './ColorUtils.js';
+import { FatalGraderError } from './Utils.js';
 
 const canvasIdRegex = /^[^_]*?(?:_LATE|)_([0-9]+)/;
 
@@ -79,8 +80,15 @@ async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasCo
         }
       }
     } catch (e) {
-      console.error(c.error('Could not automatically grade submission.'));
-      console.error(c.error(e.stack));
+      if (e instanceof FatalGraderError) {
+        console.error(c.error('Encountered an error that would interfere'
+          + ' with the grading of further submissions. Aborting grader at this point.'));
+        console.error(c.error(e.toString()));
+        break;
+      } else {
+        console.error(c.error('Could not automatically grade submission.'));
+        console.error(c.error(e.stack));
+      }
     }
     console.log(c.warning('------------------------------'));
   }

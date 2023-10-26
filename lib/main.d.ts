@@ -128,6 +128,15 @@ export class Grader {
    */
   assertRequestDeepEquals(points: number, url: string, method: Verb, body: any, expectedValue: any): Promise<void>;
   /**
+   * Asserts that a request response has a certain status code.
+   * @param {number} points Points the test case is worth
+   * @param {string} url URL to request
+   * @param {Verb} method Request method to use 
+   * @param {any} body Request body (stringified automatically if needed)
+   * @param {number} expectedStatus Status code that response should have
+   */
+  assertRequestStatus(points: number, url: string, method: Verb, body: any, expectedStatus: number): Promise<void>;
+  /**
    * Runs a provided assertion, removing the _id attribute from the result
    * of `testCase()` first and then returning it after the assertion completes.
    * @param {number} points Points the test case is worth.

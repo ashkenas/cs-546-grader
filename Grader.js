@@ -4,6 +4,7 @@ import { spawn, execSync } from 'child_process';
 import { deepStrictEqual } from 'assert';
 import { pathToFileURL } from 'url';
 import { MongoClient, ObjectId } from 'mongodb';
+import { FatalGraderError } from './Utils';
 
 /**
  * HTTP request verb
@@ -445,6 +446,6 @@ export default class Grader {
     }
     if (this.subprocess)
       if (!this.subprocess.kill())
-        console.warn('Failed to kill student submission process.');
+        throw new FatalGraderError('Failed to kill student submission process.');
   }
 };
