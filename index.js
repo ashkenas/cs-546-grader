@@ -59,13 +59,14 @@ async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasCo
   for (const sub of subs.filter(file => file.endsWith('.zip'))) {
     const fileLoc = path.join(submissionsDir, sub);
     const subDir = path.join('current_submission', sub.substring(0, sub.length - 4));
+    let grader = null;
     try {
       process.chdir(originalDir);
       console.log(`Grading ${c.info(sub)}...`);
       await fs.rm('current_submission', { recursive: true, force: true });
       const zip = new Zip(fileLoc);
       zip.extractAllTo(subDir);
-      const grader = new GraderClass(assignmentConfig);
+      grader = new GraderClass(assignmentConfig);
       const { grade, comments } = await grader.run();
       console.log(`Done. Scored ${c.success(grade)}`);
       if (!canvas) console.log(c.error(comments));
@@ -80,6 +81,7 @@ async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasCo
         }
       }
     } catch (e) {
+      await grader?.cleanup();
       if (e instanceof FatalGraderError) {
         console.error(c.error('Encountered an error that would interfere'
           + ' with the grading of further submissions. Aborting grader at this point.'));

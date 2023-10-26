@@ -43,6 +43,7 @@ export default class Grader {
     this.module = true;
     this.startScript = 'node app.js';
     this.subprocess = null;
+    this.subprocessClosed = true;
     this.db = null;
     this.score = 100;
     this.comments = [];
@@ -172,9 +173,16 @@ export default class Grader {
       };
       body = pretty(body);
     }
-    options.body = body;
-    const res = await fetch(url, options)
-    return [res.status, await res.text()];
+    if (method !== 'GET' && body)
+      options.body = body;
+    try {
+      const res = await fetch(url, options)
+      return [res.status, await res.text()];
+    } catch (e) {
+      if (e instanceof TypeError)
+        throw Error(`Could not complete request: ${method} ${url}`);
+      else throw e;
+    }
   }
 
   /**
@@ -321,8 +329,23 @@ export default class Grader {
     const cmd = this.startScript.split(' ');
     if (!cmd[0] || cmd[0] !== 'node')
       throw new Error('Possibly unsafe start script encountered: ' + this.startScript);
-    this.subprocess = spawn(cmd[0], cmd.slice(1), {
-      cwd: this.directory
+    this.subprocess = await new Promise((resolve, reject) => {
+      const subprocess = spawn(cmd[0], cmd.slice(1), {
+        cwd: this.directory
+      });
+      this.subprocessClosed = false;
+      // Resolve eventually if we don't find what we want
+      const timer = setTimeout(() => resolve(subprocess), 5000);
+      // If URL printed, resolve immediately
+      subprocess.stdout.on('data', (chunk) => {
+        chunk = chunk.toString();
+        if (chunk.includes('localhost') || chunk.includes('127.0.0.1')) {
+          clearTimeout(timer);
+          resolve(subprocess);
+        }
+      });
+      // Track closure of subprocess
+      subprocess.on('close', () => this.subprocessClosed = true);
     });
   }
   
@@ -430,12 +453,6 @@ export default class Grader {
    * Called internally by the grading framework.
    */
   async cleanup() {
-    if (!this.hadModules) {
-      await fs.rm(path.join(this.directory, 'node_modules'), {
-        recursive: true,
-        force: true
-      });
-    }
     if (this.hasDatabase) {
       await this.db.dropDatabase();
       await this.client.close(true);
@@ -444,8 +461,14 @@ export default class Grader {
         await closeConnection();
       } catch {}
     }
-    if (this.subprocess)
+    if (this.subprocess && !this.subprocessClosed)
       if (!this.subprocess.kill())
         throw new FatalGraderError('Failed to kill student submission process.');
+    if (!this.hadModules) {
+      await fs.rm(path.join(this.directory, 'node_modules'), {
+        recursive: true,
+        force: true
+      });
+    }
   }
 };
