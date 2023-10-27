@@ -41,6 +41,8 @@ async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasCo
     console.log(c.error(comments));
     return;
   }
+  if (assignmentConfig.runStartScript && !assignmentConfig.startScript)
+    console.log(c.warning("Using default start script 'node app.js'"));
   const canvas = canvasConfig ?
     await new BulkGradeUpdater().setParameters(
       canvasConfig.apiKey,

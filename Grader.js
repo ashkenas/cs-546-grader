@@ -391,8 +391,6 @@ export default class Grader {
         if (!this.packageJson.scripts || !this.packageJson.scripts.start) {
           console.log(this.packageJson);
           this.deductPoints(5, 'Missing start script in package.json file.');
-          if (!this.defaultStartScript && this.runStartScript)
-            throw new Error('Student did not provide start script and no default was provided.');
           this.startScript = this.defaultStartScript;
         }
       }
