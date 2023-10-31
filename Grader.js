@@ -30,7 +30,7 @@ export default class Grader {
   constructor(assignmentConfig) {
     assignmentConfig = assignmentConfig || {};
     this.requiredFiles = assignmentConfig.requiredFiles || [];
-    this.defaultStartScript = assignmentConfig.startScript || null;
+    this.defaultStartScript = assignmentConfig.startScript || 'node app.js';
     this.runStartScript = assignmentConfig.runStartScript;
     this.checkPackage = assignmentConfig.checkPackage ?? true;
     this.hasDatabase = assignmentConfig.hasDatabase;
@@ -41,7 +41,7 @@ export default class Grader {
     this.directory = 'current_submission';
     this.author = '';
     this.module = true;
-    this.startScript = 'node app.js';
+    this.startScript = null;
     this.subprocess = null;
     this.subprocessClosed = true;
     this.db = null;
@@ -381,8 +381,6 @@ export default class Grader {
     if (this.checkPackage) {
       if (!this.packageJson) {
         this.deductPoints(5, 'Missing package.json file.');
-        if (!this.defaultStartScript && this.runStartScript)
-          throw new Error('Student did not provide start script and no default was provided.');
         this.startScript = this.defaultStartScript;
       } else {
         if (!this.packageJson.type || this.packageJson.type !== 'module')
