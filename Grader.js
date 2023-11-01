@@ -30,6 +30,7 @@ export default class Grader {
   constructor(assignmentConfig) {
     assignmentConfig = assignmentConfig || {};
     this.requiredFiles = assignmentConfig.requiredFiles || [];
+    this.requiredCollections = assignmentConfig.requiredCollections || [];
     this.defaultStartScript = assignmentConfig.startScript || 'node app.js';
     this.runStartScript = assignmentConfig.runStartScript;
     this.checkPackage = assignmentConfig.checkPackage ?? true;
@@ -398,6 +399,30 @@ export default class Grader {
       .map(([file, _]) => file)
       .join(', ');
     if (missingFiles) throw new Error('Missing file(s): ' + missingFiles);
+    if (this.hasDatabase && this.requiredCollections.length) {
+      const foundCollections = [];
+      let collectionsFile;
+      try {
+        collectionsFile = await fs.readFile('./config/mongoCollections.js', {
+          encoding: 'utf-8'
+        });
+      } catch {
+        throw new Error('Couldn\'t read collections configuration.');
+      }
+      const matches = collectionsFile.matchAll(/getCollectionFn\('(.*?)'\)/);
+      for (const [, collection] of matches)
+        foundCollections.push(collection);
+      const missingCollections = this.requiredCollections
+        .filter((col) => !foundCollections.includes(col)).join(', ');
+      const extraCollections = foundCollections
+        .filter((col) => !this.requiredCollections.includes(col)).join(', ');
+      if (missingCollections || extraCollections) {
+        throw new Error(`Collections error: unexpected and/or missing collections.
+- Missing collections: ${missingCollections || 'None'}
+- Extra/unexpected collections: ${extraCollections || 'None'}`);
+      }
+    }
+    this.assignmentConfig
     if (this.packageJson && this.packageJson.dependencies)
       execSync('npm i', { cwd: this.directory });
   }
