@@ -227,6 +227,48 @@ export default class Grader {
   }
 
   /**
+   * Asserts that a response is ok (status 200) and has the specified body.
+   * Ignores the `_id` key while checking equality, then returns the value
+   * of it.
+   * @param {number} points Points the test case is worth
+   * @param {string} url URL to request
+   * @param {Verb} method Request method to use 
+   * @param {*} body Request body (stringified automatically if needed)
+   * @param {*} expectedValue Expected response body (can be any type)
+   * @return {Promise<string>} The value of the `_id` property
+   */
+  async assertRequestDeepEqualsWithoutId(points, url, method, body, expectedValue) {
+    const testCaseText = `${method.toUpperCase()} ${url}`;
+    const [status, text] = await this.request(url, method, body);
+    if (status !== 200) {
+      this.deductPoints(
+        points,
+        testCaseText,
+        `Route did not return an OK (200) status code.`
+      );
+      return;
+    }
+    let actual = text;
+    try {
+      actual = JSON.parse(actual);
+    } catch(e) {
+      this.deductPoints(
+        points,
+        testCaseText,
+        `Invalid response body:\n${text}`
+      );
+      return;
+    }
+    return await this.assertWithoutId(
+      points,
+      testCaseText,
+      () => actual,
+      expectedValue,
+      this.assertDeepEquals
+    );
+  }
+
+  /**
    * Runs a provided assertion, removing the _id attribute from the result
    * of `testCase()` first and then returning it after the assertion completes.
    * @param {number} points Points the test case is worth.
