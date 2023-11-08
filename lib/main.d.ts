@@ -132,6 +132,18 @@ export class Grader {
    */
   assertRequestDeepEquals(points: number, url: string, method: Verb, body: any, expectedValue: any): Promise<void>;
   /**
+   * Asserts that a response is ok (status 200) and has the specified body.
+   * Ignores the `_id` key while checking equality, then returns the value
+   * of it.
+   * @param {number} points Points the test case is worth
+   * @param {string} url URL to request
+   * @param {Verb} method Request method to use 
+   * @param {any} body Request body (stringified automatically if needed)
+   * @param {any} expectedValue Expected response body (can be any type)
+   * @return The value of the `_id` property
+   */
+  assertRequestDeepEqualsWithoutId(points: number, url: string, method: Verb, body: any, expectedValue: any): Promise<string>;
+  /**
    * Asserts that a request response has a certain status code.
    * @param {number} points Points the test case is worth
    * @param {string} url URL to request
