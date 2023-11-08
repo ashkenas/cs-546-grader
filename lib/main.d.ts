@@ -19,6 +19,10 @@ export type AssignmentConfig = {
    */
   requiredFiles?: string[];
   /**
+   * Names of all the collections that must be present in the database. Grading will fail if any are absent.
+   */
+  requiredCollections?: string[];
+  /**
    * Specifies if the package.json file should be checked for existence and required properties. Default is true.
    */
   checkPackage?: boolean;
