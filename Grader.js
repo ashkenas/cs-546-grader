@@ -438,6 +438,7 @@ export default class Grader {
         }
       }
     }
+    process.chdir(this.directory);
     const missingFiles = Object.entries(files)
       .filter(([_, found]) => !found)
       .map(([file, _]) => file)
@@ -453,7 +454,7 @@ export default class Grader {
       } catch {
         throw new Error('Couldn\'t read collections configuration.');
       }
-      const matches = collectionsFile.matchAll(/getCollectionFn\('(.*?)'\)/);
+      const matches = collectionsFile.matchAll(/getCollectionFn\('(.*?)'\)/g);
       for (const [, collection] of matches)
         foundCollections.push(collection);
       const missingCollections = this.requiredCollections
@@ -505,7 +506,6 @@ export default class Grader {
       await this.setupDatabase();
     if (this.runStartScript)
       await this.start();
-    process.chdir(this.directory);
     await this.testCases();
     await this.cleanup();
     return {
