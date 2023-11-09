@@ -315,7 +315,8 @@ export default class Grader {
     if (status === expectedStatus) return;
     this.deductPoints(
       points,
-      `${method.toUpperCase()} ${url}`,
+      `${method.toUpperCase()} ${url}`
+        + (body ? `\n${JSON.stringify(body, null, 2)}` : ''),
       `Received status: ${status}\nExpected status: ${expectedStatus}`
     );
   }
