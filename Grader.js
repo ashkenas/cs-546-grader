@@ -519,7 +519,7 @@ export default class Grader {
    * Called internally by the grading framework.
    */
   async cleanup() {
-    if (this.hasDatabase) {
+    if (this.hasDatabase && this.db) {
       await this.db.dropDatabase();
       await this.client.close(true);
       try {
