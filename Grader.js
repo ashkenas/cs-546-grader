@@ -455,7 +455,7 @@ export default class Grader {
       } catch {
         throw new Error('Couldn\'t read collections configuration.');
       }
-      const matches = collectionsFile.matchAll(/getCollectionFn\('(.*?)'\)/g);
+      const matches = collectionsFile.matchAll(/getCollectionFn\(['"`](.*?)['"`]\)/g);
       for (const [, collection] of matches)
         foundCollections.push(collection);
       const missingCollections = this.requiredCollections
