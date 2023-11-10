@@ -181,7 +181,8 @@ export default class Grader {
       return [res.status, await res.text()];
     } catch (e) {
       if (e instanceof TypeError)
-        throw Error(`Could not complete request: ${method} ${url}`);
+        throw Error(`Could not complete request: ${method} ${url}
+Server either didn't start, is at an unexpected URL, or crashed during the previous test case.`);
       else throw e;
     }
   }
