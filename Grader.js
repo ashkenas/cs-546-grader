@@ -202,7 +202,7 @@ Server either didn't start, is at an unexpected URL, or crashed during the previ
       this.deductPoints(
         points,
         testCaseText,
-        `Route did not return an OK (200) status code.`
+        `Route did not return an OK (200) status code.\nReceived: ${status}`
       );
       return;
     }
