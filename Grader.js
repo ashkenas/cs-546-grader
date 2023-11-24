@@ -5,6 +5,7 @@ import { deepStrictEqual } from 'assert';
 import { pathToFileURL } from 'url';
 import { MongoClient, ObjectId } from 'mongodb';
 import { FatalGraderError } from './Utils.js';
+import { HTTPRequest, HTTPResponse, Page } from 'puppeteer-core';
 
 /**
  * HTTP request verb
@@ -353,6 +354,22 @@ Server either didn't start, is at an unexpected URL, or crashed during the previ
         break;
       }
     }
+  }
+
+  /**
+   * Goes to a page with puppeteer with an interception handler.
+   * Useful for posting data or any request that isn't a GET.
+   * @param {Page} page Puppeteer page 
+   * @param {string} location Location to go to
+   * @param {(req: HTTPRequest)=>any} handler Interception handler
+   * @returns {Promise<HTTPResponse>}
+   */
+  async interceptRequest(page, location, handler) {
+    await page.setRequestInterception(true);
+    page.once('request', handler);
+    const response = await page.goto(location);
+    await page.setRequestInterception(false);
+    return response;
   }
 
   /**

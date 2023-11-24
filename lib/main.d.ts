@@ -1,6 +1,8 @@
 /// <reference types="node/child_process" />
 /// <reference types="node/ts4.8/child_process" />
 
+import { HTTPResponse, HTTPRequest, Page } from "puppeteer-core";
+
 export type AssignmentConfig = {
   /**
    * Only run the submission in the current_submission directory. Default is false.
@@ -174,6 +176,15 @@ export class Grader {
    * @param {string} pageName Name to print in comment
    */
   assertValidHTML(points: number, rawHTML: string, pageName: string): Promise<void>;
+  /**
+   * Goes to a page with puppeteer with an interception handler.
+   * Useful for posting data or any request that isn't a GET.
+   * @param {Page} page Puppeteer page 
+   * @param {string} location Location to go to
+   * @param {((req: HTTPRequest)=>any)} handler Interception handler
+   * @returns {Promise<HTTPResponse>}
+   */
+  interceptRequest(page: Page, location: string, handler: ((req: HTTPRequest)=>any)): Promise<HTTPResponse>;
   /**
    * Builds a file URL from a relative file path for a file in a submission
    * @param {string} relativeFile Relative file path from submission root
