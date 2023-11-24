@@ -323,6 +323,39 @@ Server either didn't start, is at an unexpected URL, or crashed during the previ
   }
 
   /**
+   * Asserts that a page has no HTML validation errors
+   * @param {number} points Points to deduct for invalid HTML
+   * @param {string} rawHTML Raw text of the page as a string
+   * @param {string} pageName Name to print in comment
+   */
+  async assertValidHTML(points, rawHTML, pageName) {
+    let res;
+    try {
+      res = await fetch('https://validator.w3.org/nu/?out=json', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8'
+        },
+        body: rawHTML
+      });
+    } catch (e) {
+      if (e instanceof TypeError)
+        throw new Error("Couldn't contact the HTML validator successfully.");
+      throw e;
+    }
+    const { messages } = await res.json();
+    for (const message of messages) {
+      if (message.type === 'error') {
+        this.deductPoints(
+          points,
+          `${pageName} has HTML validation errors.`
+        );
+        break;
+      }
+    }
+  }
+
+  /**
    * Builds a file URL from a relative file path for a file in a submission
    * @param {string} relativeFile Relative file path from submission root
    * @param {boolean} url Whether the returned path should be a URL
