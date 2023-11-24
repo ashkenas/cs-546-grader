@@ -18,6 +18,7 @@ const canvasIdRegex = /^[^_]*?(?:_LATE|)_([0-9]+)/;
  * @property {boolean} [checkPackage] Specifies if the package.json file should be checked for existence and required properties. Default is true.
  * @property {boolean} [hasDatabase] Whether or not to enable database grading features. Default is false.
  * @property {boolean} [connectionString] MongoDB connection string to use. Default is 'mongodb://localhost:27017/'.
+ * @property {boolean} [commentsAsFiles] If true, comments will be uploaded in text files instead of as raw comment text. Default is false.
  */
 
 /**

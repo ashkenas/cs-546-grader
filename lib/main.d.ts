@@ -34,6 +34,10 @@ export type AssignmentConfig = {
    * MongoDB connection string. Default is 'mongodb://localhost:27017/'.
    */
   connectionString?: string;
+  /**
+   * If true, comments will be uploaded in text files instead of as raw comment text. Default is false.
+   */
+  commentsAsFiles?: true;
 };
 export type CanvasConfig = {
   /**
@@ -163,6 +167,13 @@ export class Grader {
    * @returns {Promise<string>} The _id field from `testCase()`
    */
   assertWithoutId(points: number, message: string, testCase: any, expectedValue: any, assertion: any): Promise<string>;
+  /**
+   * Asserts that a page has no HTML validation errors
+   * @param {number} points Points to deduct for invalid HTML
+   * @param {string} rawHTML Raw text of the page as a string
+   * @param {string} pageName Name to print in comment
+   */
+  assertValidHTML(points: number, rawHTML: string, pageName: string): Promise<void>;
   /**
    * Builds a file URL from a relative file path for a file in a submission
    * @param {string} relativeFile Relative file path from submission root
