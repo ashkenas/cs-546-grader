@@ -366,10 +366,11 @@ Server either didn't start, is at an unexpected URL, or crashed during the previ
    */
   async interceptRequest(page, location, handler) {
     await page.setRequestInterception(true);
-    page.once('request', handler);
-    const response = await page.goto(location);
-    await page.setRequestInterception(false);
-    return response;
+    page.once('request', async (req) => {
+      handler(req);
+      await page.setRequestInterception(false);
+    });
+    return await page.goto(location);
   }
 
   /**
