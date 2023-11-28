@@ -5,7 +5,7 @@ import { deepStrictEqual } from 'assert';
 import { pathToFileURL } from 'url';
 import { MongoClient, ObjectId } from 'mongodb';
 import { FatalGraderError } from './Utils.js';
-import { HTTPRequest, HTTPResponse, Page } from 'puppeteer-core';
+import { HTTPRequest, HTTPResponse, Page,  } from 'puppeteer-core';
 
 /**
  * HTTP request verb
@@ -370,7 +370,11 @@ Server either didn't start, is at an unexpected URL, or crashed during the previ
       handler(req);
       await page.setRequestInterception(false);
     });
-    return await page.goto(location);
+    try {
+      return await page.goto(location);
+    } catch (e) {
+      throw new Error('Unable to load page. Possible server crash. Problematic page: ' + location);
+    }
   }
 
   /**
