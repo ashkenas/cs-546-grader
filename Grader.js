@@ -366,15 +366,19 @@ Server either didn't start, is at an unexpected URL, or crashed during the previ
    */
   async interceptRequest(page, location, handler) {
     await page.setRequestInterception(true);
+    let error = false;
     page.once('request', async (req) => {
-      handler(req);
+      try {
+        await handler(req);
+      } catch (e) {
+        error = e;
+      }
       await page.setRequestInterception(false);
     });
-    try {
-      return await page.goto(location);
-    } catch (e) {
+    const res = await page.goto(location);
+    if (error)
       throw new Error('Unable to load page. Possible server crash. Problematic page: ' + location);
-    }
+    return res;
   }
 
   /**
