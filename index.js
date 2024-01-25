@@ -38,9 +38,16 @@ const canvasIdRegex = /^[^_]*?(?:_LATE|)_([0-9]+)/;
  */
 async function autoGrade(submissionsDir, GraderClass, assignmentConfig, canvasConfig) {
   if (assignmentConfig?.onlyCurrent) {
-    const { grade, comments } = await new GraderClass(assignmentConfig).run();
-    console.log('Score: ' + c.success(grade));
-    console.log(c.error(comments));
+    const grader = new GraderClass(assignmentConfig);
+    try {
+      const { grade, comments } = await grader.run();
+      console.log('Score: ' + c.success(grade));
+      console.log(c.error(comments));
+    } catch (e) {
+      await grader.cleanup();
+      console.error(c.error('Could not automatically grade submission.'));
+      console.error(c.error(e.stack));
+    }
     return;
   }
   if (assignmentConfig.runStartScript && !assignmentConfig.startScript)
